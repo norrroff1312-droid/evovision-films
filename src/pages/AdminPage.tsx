@@ -4,6 +4,7 @@ import { useAuth } from '@/lib/AuthContext';
 import { useLanguage } from '@/lib/LanguageContext';
 import { Link } from '@/lib/router';
 import { fetchDashboardStats } from '@/lib/adminApi';
+import { FilmsView } from '@/pages/admin/FilmsView';
 
 type Stats = {
   films: number;
@@ -449,7 +450,7 @@ export function AdminPage() {
   if (seg.length <= 1) {
     view = <DashboardView />;
   } else if (seg[1] === 'films') {
-    view = <PlaceholderView titleKey="admin.films" />;
+    view = <FilmsView />;
   } else if (seg[1] === 'episodes') {
     view = <PlaceholderView titleKey="admin.episodes" />;
   } else if (seg[1] === 'lessons') {
