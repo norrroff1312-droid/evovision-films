@@ -330,7 +330,6 @@ const hy: Dictionary = {
   'admin.program': 'Ծրագիր',
   'admin.coverImage': 'Կազմի նկար',
   'admin.heroImage': 'Ֆոնային նկար',
-  'admin.title': 'Կառավարման համակարգ',
   'admin.synopsis': 'Սինոպսիս',
   'admin.description': 'Նկարագրություն',
   'admin.seoTitle': 'SEO վերնագիր',
