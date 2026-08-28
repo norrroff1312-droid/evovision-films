@@ -1,12 +1,360 @@
-import { useState } from 'react';
-import { Lock, LogOut, Shield, FileText, Users, Settings } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Lock, LogOut, Shield, LayoutDashboard, Film, Clapperboard, Scissors, Users, ExternalLink, TrendingUp, FileText, CircleCheck, File as FileEdit } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
 import { useLanguage } from '@/lib/LanguageContext';
 import { Link } from '@/lib/router';
+import { fetchDashboardStats } from '@/lib/adminApi';
+
+type Stats = {
+  films: number;
+  episodes: number;
+  lessons: number;
+  sponsors: number;
+  published: number;
+  drafts: number;
+};
+
+const navItems = [
+  { key: 'admin.dashboard', icon: LayoutDashboard, to: '/admin' },
+  { key: 'admin.films', icon: Film, to: '/admin/films' },
+  { key: 'admin.episodes', icon: Clapperboard, to: '/admin/episodes' },
+  { key: 'admin.lessons', icon: Scissors, to: '/admin/lessons' },
+  { key: 'admin.sponsors', icon: Users, to: '/admin/sponsors' },
+] as const;
+
+function AdminShell({ children }: { children: React.ReactNode }) {
+  const { session, signOut } = useAuth();
+  const { t } = useLanguage();
+  const route = useRouterSafe();
+
+  return (
+    <div className="min-h-screen bg-black text-white flex">
+      {/* Sidebar */}
+      <aside className="hidden lg:flex flex-col w-60 border-r border-white/5 bg-zinc-950/60 sticky top-0 h-screen">
+        <div className="px-6 py-6 border-b border-white/5">
+          <div className="flex items-center gap-2.5">
+            <img
+              src="/assets/brand/evovision_spitak_karmir.png"
+              alt="EvoVision Films"
+              className="h-8 w-auto object-contain"
+            />
+          </div>
+          <p className="mt-3 text-xs uppercase tracking-widest text-white/40 font-semibold">
+            {t('admin.title')}
+          </p>
+        </div>
+
+        <nav className="flex-1 px-3 py-4 space-y-1">
+          {navItems.map((item) => {
+            const active =
+              item.to === '/admin'
+                ? route.path === '/admin'
+                : route.path.startsWith(item.to);
+            return (
+              <Link
+                key={item.to}
+                to={item.to}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-200 ${
+                  active
+                    ? 'bg-red-600/15 text-white border border-red-600/30'
+                    : 'text-white/60 hover:text-white hover:bg-white/5 border border-transparent'
+                }`}
+              >
+                <item.icon className={`w-4 h-4 ${active ? 'text-red-400' : 'text-white/50'}`} />
+                {t(item.key)}
+              </Link>
+            );
+          })}
+        </nav>
+
+        <div className="px-3 py-4 border-t border-white/5 space-y-1">
+          <Link
+            to="/"
+            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors"
+          >
+            <ExternalLink className="w-4 h-4 text-white/50" />
+            {t('admin.backToSite')}
+          </Link>
+          <button
+            onClick={signOut}
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors"
+          >
+            <LogOut className="w-4 h-4 text-white/50" />
+            {t('admin.signOut')}
+          </button>
+        </div>
+      </aside>
+
+      {/* Main */}
+      <div className="flex-1 min-w-0 flex flex-col">
+        {/* Mobile top bar */}
+        <div className="lg:hidden flex items-center justify-between px-4 py-4 border-b border-white/5 bg-zinc-950/60 sticky top-0 z-10">
+          <div className="flex items-center gap-2">
+            <img
+              src="/assets/brand/evovision_spitak_karmir.png"
+              alt="EvoVision Films"
+              className="h-7 w-auto object-contain"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <Link
+              to="/"
+              className="p-2 text-white/60 hover:text-white transition-colors"
+              aria-label={t('admin.backToSite')}
+            >
+              <ExternalLink className="w-5 h-5" />
+            </Link>
+            <button
+              onClick={signOut}
+              className="p-2 text-white/60 hover:text-white transition-colors"
+              aria-label={t('admin.signOut')}
+            >
+              <LogOut className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Mobile nav */}
+        <div className="lg:hidden flex gap-1 px-4 py-3 border-b border-white/5 bg-zinc-950/40 overflow-x-auto">
+          {navItems.map((item) => {
+            const active =
+              item.to === '/admin'
+                ? route.path === '/admin'
+                : route.path.startsWith(item.to);
+            return (
+              <Link
+                key={item.to}
+                to={item.to}
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs whitespace-nowrap transition-colors ${
+                  active
+                    ? 'bg-red-600/15 text-white'
+                    : 'text-white/60 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                <item.icon className="w-4 h-4" />
+                {t(item.key)}
+              </Link>
+            );
+          })}
+        </div>
+
+        <header className="hidden lg:flex items-center justify-between px-8 py-5 border-b border-white/5">
+          <div>
+            <p className="text-xs uppercase tracking-widest text-white/40 font-semibold">
+              {t('admin.title')}
+            </p>
+            <p className="text-sm text-white/50 mt-0.5">{session?.user?.email}</p>
+          </div>
+          <button
+            onClick={signOut}
+            className="inline-flex items-center gap-2 px-4 py-2 border border-white/10 hover:border-white/20 rounded-lg text-sm text-white/70 hover:text-white transition-colors"
+          >
+            <LogOut className="w-4 h-4" />
+            {t('admin.signOut')}
+          </button>
+        </header>
+
+        <main className="flex-1 px-4 sm:px-6 lg:px-8 py-8">{children}</main>
+      </div>
+    </div>
+  );
+}
+
+function useRouterSafe() {
+  const [path, setPath] = useState(() =>
+    typeof window !== 'undefined' ? window.location.hash.replace(/^#/, '') || '/' : '/'
+  );
+  useEffect(() => {
+    const onChange = () =>
+      setPath(window.location.hash.replace(/^#/, '') || '/');
+    window.addEventListener('hashchange', onChange);
+    return () => window.removeEventListener('hashchange', onChange);
+  }, []);
+  return { path };
+}
+
+function StatCard({
+  icon: Icon,
+  label,
+  value,
+  loading,
+  accent,
+}: {
+  icon: typeof Film;
+  label: string;
+  value: number;
+  loading: boolean;
+  accent: string;
+}) {
+  return (
+    <div className="relative overflow-hidden rounded-xl border border-white/10 bg-zinc-900/40 p-6 group hover:border-white/20 transition-colors">
+      <div className="flex items-start justify-between mb-6">
+        <div className={`w-11 h-11 rounded-lg flex items-center justify-center ${accent}`}>
+          <Icon className="w-5 h-5" />
+        </div>
+      </div>
+      {loading ? (
+        <div className="h-9 w-16 rounded-md bg-white/5 animate-pulse" />
+      ) : (
+        <p className="text-3xl font-bold text-white tracking-tight tabular-nums">{value}</p>
+      )}
+      <p className="mt-1 text-sm text-white/50">{label}</p>
+    </div>
+  );
+}
+
+function DashboardView() {
+  const { t } = useLanguage();
+  const [stats, setStats] = useState<Stats | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+    fetchDashboardStats().then((data) => {
+      if (active) {
+        setStats(data);
+        setLoading(false);
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const cards = [
+    { icon: Film, label: t('admin.totalFilms'), value: stats?.films ?? 0, accent: 'bg-red-600/15 text-red-400' },
+    { icon: Clapperboard, label: t('admin.totalEpisodes'), value: stats?.episodes ?? 0, accent: 'bg-blue-600/15 text-blue-400' },
+    { icon: Scissors, label: t('admin.totalLessons'), value: stats?.lessons ?? 0, accent: 'bg-green-600/15 text-green-400' },
+    { icon: Users, label: t('admin.totalSponsors'), value: stats?.sponsors ?? 0, accent: 'bg-amber-600/15 text-amber-400' },
+  ];
+
+  const totalContent = (stats?.films ?? 0) + (stats?.episodes ?? 0) + (stats?.lessons ?? 0);
+
+  return (
+    <div>
+      <div className="mb-8">
+        <h1 className="text-2xl lg:text-3xl font-bold text-white tracking-tight">
+          {t('admin.dashboard')}
+        </h1>
+        <p className="mt-2 text-sm text-white/50 max-w-2xl leading-relaxed">
+          {t('admin.recentItems')}
+        </p>
+      </div>
+
+      {/* Stat cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
+        {cards.map((c) => (
+          <StatCard
+            key={c.label}
+            icon={c.icon}
+            label={c.label}
+            value={c.value}
+            loading={loading}
+            accent={c.accent}
+          />
+        ))}
+      </div>
+
+      {/* Published vs Drafts */}
+      <div className="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">
+        <div className="lg:col-span-2 rounded-xl border border-white/10 bg-zinc-900/40 p-6">
+          <div className="flex items-center gap-2 mb-5">
+            <TrendingUp className="w-4 h-4 text-red-400" />
+            <h2 className="text-sm font-semibold text-white uppercase tracking-wider">
+              {t('admin.publishedItems')} / {t('admin.draftItems')}
+            </h2>
+          </div>
+          {loading ? (
+            <div className="h-6 w-full rounded-md bg-white/5 animate-pulse" />
+          ) : totalContent === 0 ? (
+            <p className="text-sm text-white/40 py-6 text-center">{t('admin.noItems')}</p>
+          ) : (
+            <div className="space-y-4">
+              <div>
+                <div className="flex items-center justify-between text-sm mb-1.5">
+                  <span className="flex items-center gap-1.5 text-white/60">
+                    <CircleCheck className="w-3.5 h-3.5 text-green-400" />
+                    {t('admin.publishedItems')}
+                  </span>
+                  <span className="text-white font-medium tabular-nums">{stats?.published ?? 0}</span>
+                </div>
+                <div className="h-2 rounded-full bg-white/5 overflow-hidden">
+                  <div
+                    className="h-full bg-green-500/70 rounded-full transition-all duration-500"
+                    style={{
+                      width: totalContent > 0 ? `${((stats?.published ?? 0) / totalContent) * 100}%` : '0%',
+                    }}
+                  />
+                </div>
+              </div>
+              <div>
+                <div className="flex items-center justify-between text-sm mb-1.5">
+                  <span className="flex items-center gap-1.5 text-white/60">
+                    <FileEdit className="w-3.5 h-3.5 text-amber-400" />
+                    {t('admin.draftItems')}
+                  </span>
+                  <span className="text-white font-medium tabular-nums">{stats?.drafts ?? 0}</span>
+                </div>
+                <div className="h-2 rounded-full bg-white/5 overflow-hidden">
+                  <div
+                    className="h-full bg-amber-500/70 rounded-full transition-all duration-500"
+                    style={{
+                      width: totalContent > 0 ? `${((stats?.drafts ?? 0) / totalContent) * 100}%` : '0%',
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Quick links */}
+        <div className="rounded-xl border border-white/10 bg-zinc-900/40 p-6">
+          <div className="flex items-center gap-2 mb-5">
+            <FileText className="w-4 h-4 text-red-400" />
+            <h2 className="text-sm font-semibold text-white uppercase tracking-wider">
+              {t('admin.content')}
+            </h2>
+          </div>
+          <div className="space-y-2">
+            {navItems.slice(1).map((item) => (
+              <Link
+                key={item.to}
+                to={item.to}
+                className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-white/60 hover:text-white hover:bg-white/5 transition-colors group"
+              >
+                <item.icon className="w-4 h-4 text-white/50 group-hover:text-red-400 transition-colors" />
+                {t(item.key)}
+              </Link>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PlaceholderView({ titleKey }: { titleKey: 'admin.films' | 'admin.episodes' | 'admin.lessons' | 'admin.sponsors' }) {
+  const { t } = useLanguage();
+  return (
+    <div>
+      <h1 className="text-2xl lg:text-3xl font-bold text-white tracking-tight mb-8">
+        {t(titleKey)}
+      </h1>
+      <div className="rounded-xl border border-white/10 bg-zinc-900/30 p-12 text-center">
+        <p className="text-sm text-white/40 leading-relaxed max-w-md mx-auto">
+          {t('admin.noItems')}
+        </p>
+      </div>
+    </div>
+  );
+}
 
 export function AdminPage() {
   const { session, loading, isAdmin, signIn, signOut } = useAuth();
   const { t } = useLanguage();
+  const route = useRouterSafe();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -96,50 +444,21 @@ export function AdminPage() {
     );
   }
 
-  const sections = [
-    { icon: FileText, label: t('admin.content'), to: '/admin/content' },
-    { icon: Users, label: t('admin.sponsors'), to: '/admin/sponsors' },
-    { icon: Settings, label: t('admin.settings'), to: '/admin/settings' },
-  ];
+  const seg = route.path.replace(/^\//, '').split('/').filter(Boolean);
+  let view: React.ReactNode;
+  if (seg.length <= 1) {
+    view = <DashboardView />;
+  } else if (seg[1] === 'films') {
+    view = <PlaceholderView titleKey="admin.films" />;
+  } else if (seg[1] === 'episodes') {
+    view = <PlaceholderView titleKey="admin.episodes" />;
+  } else if (seg[1] === 'lessons') {
+    view = <PlaceholderView titleKey="admin.lessons" />;
+  } else if (seg[1] === 'sponsors') {
+    view = <PlaceholderView titleKey="admin.sponsors" />;
+  } else {
+    view = <DashboardView />;
+  }
 
-  return (
-    <div className="min-h-screen bg-black pt-20">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-2xl font-bold text-white">{t('admin.dashboard')}</h1>
-            <p className="text-sm text-white/50 mt-1">{session.user.email}</p>
-          </div>
-          <button
-            onClick={signOut}
-            className="inline-flex items-center gap-2 px-4 py-2 border border-white/10 hover:border-white/20 rounded-lg text-sm text-white/70 hover:text-white transition-colors"
-          >
-            <LogOut className="w-4 h-4" />
-            {t('admin.signOut')}
-          </button>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {sections.map((s) => (
-            <Link
-              key={s.to}
-              to={s.to}
-              className="p-6 rounded-xl border border-white/10 bg-zinc-900/40 hover:border-red-600/40 hover:bg-red-600/5 transition-all duration-200 group"
-            >
-              <div className="w-10 h-10 rounded-lg bg-red-600/15 flex items-center justify-center mb-4 group-hover:bg-red-600/25 transition-colors">
-                <s.icon className="w-5 h-5 text-red-400" />
-              </div>
-              <h3 className="text-base font-semibold text-white">{s.label}</h3>
-            </Link>
-          ))}
-        </div>
-
-        <div className="mt-12 p-8 rounded-xl border border-white/10 bg-zinc-900/30">
-          <p className="text-sm text-white/50 leading-relaxed">
-            {t('admin.loading')} — Content management interface coming soon.
-          </p>
-        </div>
-      </div>
-    </div>
-  );
+  return <AdminShell>{view}</AdminShell>;
 }
