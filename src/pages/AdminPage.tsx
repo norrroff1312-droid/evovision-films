@@ -5,6 +5,7 @@ import { useLanguage } from '@/lib/LanguageContext';
 import { Link } from '@/lib/router';
 import { fetchDashboardStats } from '@/lib/adminApi';
 import { FilmsView } from '@/pages/admin/FilmsView';
+import { EpisodesView } from '@/pages/admin/EpisodesView';
 
 type Stats = {
   films: number;
@@ -452,7 +453,7 @@ export function AdminPage() {
   } else if (seg[1] === 'films') {
     view = <FilmsView />;
   } else if (seg[1] === 'episodes') {
-    view = <PlaceholderView titleKey="admin.episodes" />;
+    view = <EpisodesView />;
   } else if (seg[1] === 'lessons') {
     view = <PlaceholderView titleKey="admin.lessons" />;
   } else if (seg[1] === 'sponsors') {
